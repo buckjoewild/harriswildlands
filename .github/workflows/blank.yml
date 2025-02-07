@@ -1,3 +1,28 @@
+name: Monitor Quests Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  monitor-quests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run quest monitor
+        run: python path/to/quest_monitor_script.py
+
 import socket
 from typing import Any
 
