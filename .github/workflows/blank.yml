@@ -1,0 +1,439 @@
+import socket
+from typing import Any
+
+# Enhanced setup with an introductory castle description for the Harris Wildlands
+HOST = '127.0.0.1'  # Localhost (for local testing) or your server's IP
+PORT = 65432  # The port this server listens to
+
+# Function to handle player input and provide responses
+def ask_bruce(prompt):
+    responses = {
+        "describe a mystical portal i just found": "The portal glows with swirling colors, casting an ethereal light across the ground. Its energy hums softly, inviting brave explorers to step through and discover unknown worlds.",
+        "what is the purpose of the wildlands": "The Harris Wildlands exist to nurture creativity, adventure, and collaboration between explorers. It’s a realm where ideas come to life.",
+        "who are you, bruce": "I am Bruce, your guide within the Harris Wildlands. Think of me as a friend, mentor, and explorer alongside you.",
+        "connect <username> <password>": "Welcome back, adventurer! Logging you into the Harris Wildlands...",
+        "create <username> <password>": "A new adventurer rises! Your account has been created. Embark on your journey!",
+        "help": "You can ask Bruce about portals, the purpose of the Wildlands, or anything else on your adventure. Try commands like 'look', 'inventory', or 'quit'.",
+        "look": "You stand before the Castle of Harris Wildlands, its towering spires stretching into the sky. The gates creak open, revealing a courtyard filled with adventurers preparing for quests.",
+        "inventory": "You are carrying a rusty dagger, a worn backpack, and a mysterious map leading to uncharted territories. Type 'examine <item>' to learn more.",
+        "quit": "Goodbye, adventurer! The Wildlands will await your return.",
+        "examine rusty dagger": "The rusty dagger is old and worn, but it still holds potential for a brave adventurer.",
+        "examine worn backpack": "This backpack has seen many journeys, and within it lies a mix of tools and supplies.",
+        "examine mysterious map": "The map is faded but reveals distant lands with hidden paths and treasure locations.",
+        "castle": "The Castle of the Harris Wildlands stands as a beacon of hope and exploration. Its ancient walls whisper secrets of past adventures and treasures yet to be found.",
+        "default": "Bruce is thinking... Try asking again or type 'help' for suggestions."
+    }
+    return responses.get(prompt.lower(), responses["default"])
+
+# Core server loop that waits for incoming player connections
+def start_bruce_server():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.bind((HOST, PORT))
+        server.listen()
+        print(f"Bruce is live and listening on {HOST}:{PORT}...\nWaiting for players to connect.")
+
+        while True:
+            conn, addr = server.accept()  # Accept incoming connections
+            with conn:
+                print(f"Connected by {addr}")
+                try:
+                    conn.sendall(b"Welcome to the Castle of Harris Wildlands! Type 'look' to explore.\n")
+                    while True:
+                        data = conn.recv(1024)  # Receive player input
+                        if not data:
+                            print("No data received. Closing connection.")
+                            break
+                        player_input = data.decode('utf-8').strip().lower()  # Normalize input
+                        print(f"Player says: {player_input}")
+                        response = ask_bruce(player_input)  # Get Bruce's response
+                        print(f"Bruce responds: {response}")
+                        conn.sendall((response + "\n").encode('utf-8'))  # Send response to player
+                except ConnectionResetError:
+                    print("Connection lost. Waiting for next player...")
+                except Exception as e:
+                    print(f"Unexpected error: {e}. Continuing to listen for new players...")
+
+# Entry point to start the server when the program is executed
+if __name__ == "__main__":
+    try:
+        start_bruce_server()
+    except FileNotFoundError as fnf_error:
+        print("Error: Python cannot find the file to run. Check your directory and file paths.")
+    except Exception as general_error:
+        print(f"An unexpected error occurred: {general_error}")
+############################################broseph
+import os
+import openai
+import threading
+import time
+import random
+from threading import Thread
+
+# ---------------------------
+# Environment Setup
+# ---------------------------
+# Set your OpenAI API key (ensure the environment variable is set)
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+# ---------------------------
+# SECTION 1: BRUCE SELF-TESTING & INTERACTIVE DIALOGUE
+# ---------------------------
+
+def log_feedback(message):
+    """
+    Append feedback messages to 'feedback_log.txt' with a timestamp.
+    This log helps track BRUCE's self-testing and world improvements.
+    """
+    with open("feedback_log.txt", "a") as log_file:
+        log_file.write(f"{time.ctime()}: {message}\n")
+
+
+def generate_player_prompt(current_state="exploration"):
+    """
+    Dynamically generates a player prompt based on the current game state.
+    Simulates various scenarios: exploration, combat, quest, training.
+    NOTE: Future modules should expand these mappings.
+    """
+    prompt_mapping = {
+        "exploration": "Explore the surroundings and interact with an NPC.",
+        "combat": "Engage in combat with a nearby creature.",
+        "quest": "Ask Bruce to provide details on a challenging quest.",
+        "training": "Request specific training advice to improve combat skills."
+    }
+    return prompt_mapping.get(current_state, "Explore the area and see what happens.")
+
+
+def openai_self_testing(prompt):
+    """
+    BRUCE processes a prompt for self-testing.
+    Envision BRUCE as a grandmaster architect nurturing a living MUD:
+      - Moving, creating, testing, looking, talking, reflecting, and logging.
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": (
+                    "You are Bruce, the wise guardian and creative architect of Harris Wildlands. "
+                    "Continuously test and refine this virtual realm, generating new ideas and interactions. "
+                    "Your role is to move, create, test, look, talk, reflect, and log inputs as if you were "
+                    "nurturing a living, breathing world."
+                )},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def feedback_loop():
+    """
+    Runs self-testing prompts continuously in the background.
+    BRUCE cycles through test states and logs the responses for future improvement.
+    """
+    test_states = ["exploration", "combat", "quest", "training"]
+    while True:
+        state = test_states[int(time.time()) % len(test_states)]
+        prompt = generate_player_prompt(state)
+        print(f"\n[Feedback Loop] Testing state: {state}\nPrompt: {prompt}")
+        response = openai_self_testing(prompt)
+        print(f"[Bruce's Self-Test Response]: {response}\n")
+        log_feedback(f"Test State: {state}\nPrompt: {prompt}\nResponse: {response}\n")
+        time.sleep(15)
+
+
+def interactive_bruce_dialogue_branching(player_name):
+    """
+    Initiates an interactive, branching dialogue session with BRUCE.
+    BRUCE (the wise guardian) guides the player as if tending a vibrant garden.
+
+    Prompts and choices are provided to simulate a rich dialogue.
+    NOTE: Future developers can expand the dialogue tree with additional branches.
+    """
+    initial_prompt = (
+        f"Bruce greets {player_name} as a wise cook tending his garden of life and asks: "
+        "'What would you like to cultivate today? Choose from wisdom, quest, training, or story.'"
+    )
+    response = openai_self_testing(initial_prompt)
+    print(f"\nBruce: {response}\n")
+    options = {
+        "wisdom": "Sow seeds of ancient wisdom to light your path.",
+        "quest": "Embark on a quest to harvest rare ingredients for your journey.",
+        "training": "Cultivate a regimen of rigorous training to sharpen your skills.",
+        "story": "Share a tale of bountiful harvests and the lessons of nature."
+    }
+    print("Available options:")
+    for key, desc in options.items():
+        print(f"  - {key}: {desc}")
+    choice = input("\nYour choice (wisdom/quest/training/story): ").strip().lower()
+    if choice not in options:
+        print("Invalid choice. Please try again.\n")
+        return interactive_bruce_dialogue_branching(player_name)
+    branch_prompt = f"{player_name} has chosen '{choice}'. {options[choice]}"
+    branch_response = openai_self_testing(branch_prompt)
+    print(f"\nBruce: {branch_response}\n")
+    if choice == "quest":
+        follow = input("Would you like more details about the quest? (yes/no): ").strip().lower()
+        if follow == "yes":
+            quest_detail_prompt = (
+                f"{player_name} seeks further details on the quest. Describe the challenges and rewards as if "
+                "harvesting a rare crop."
+            )
+            quest_detail_response = openai_self_testing(quest_detail_prompt)
+            print(f"\nBruce: {quest_detail_response}\n")
+    elif choice == "training":
+        follow = input("Do you desire specific training advice? (yes/no): ").strip().lower()
+        if follow == "yes":
+            training_detail_prompt = (
+                f"{player_name} wants detailed training advice—like preparing the perfect recipe for success."
+            )
+            training_detail_response = openai_self_testing(training_detail_prompt)
+            print(f"\nBruce: {training_detail_response}\n")
+    cont = input("Would you like to continue the conversation? (yes/no): ").strip().lower()
+    if cont == "yes":
+        interactive_bruce_dialogue_branching(player_name)
+    else:
+        print("\nBruce smiles and says, 'Until next time, may your garden flourish.'\n")
+
+
+# ---------------------------
+# SECTION 2: WORLD BUILDING & AVATAR CLASSES
+# ---------------------------
+
+class Avatar:
+    def __init__(self, name, role, description, ability_name, ability_function):
+        self.name = name
+        self.role = role
+        self.description = description
+        self.ability_name = ability_name
+        self.ability_function = ability_function
+
+    def use_ability(self, context):
+        print(f"\n{self.name} activates {self.ability_name}!")
+        result = self.ability_function(context)
+        print(f"Result: {result}")
+
+
+def earthshapers_command(context):
+    return f"The ground trembles as Broseph shifts the terrain. Context: {context}"
+
+
+def heart_of_the_guardian(context):
+    return "A soothing light restores health and boosts defense."
+
+
+def whispers_of_the_wind(context):
+    return "Obstacles cleared, enemies disoriented by gusts of wind."
+
+
+def dreamweavers_brush(context):
+    return "New objects or structures painted into existence."
+
+
+def tech_whisperer(context):
+    return "Machines reactivated, traps bypassed, and holographic decoys deployed."
+
+
+def gatekeepers_insight(context):
+    return "Hidden paths and ancient portals revealed."
+
+
+class NPCBruce:
+    def __init__(self, name, role, description):
+        self.name = name
+        self.role = role
+        self.description = description
+        self.tasks = ["feed chickens", "water crops", "build fences", "create tunnels"]
+        self.creations = ["a new garden room", "a pond for fishing", "a hidden portal"]
+        self.active = True
+
+    def daily_routine(self):
+        """
+        Simulate NPC BRUCE performing daily tasks continuously.
+        This routine runs on a separate thread.
+        """
+        while self.active:
+            task = random.choice(self.tasks)
+            print(f"[BRUCE] Currently working on: {task}.")
+            time.sleep(5)
+
+    def world_building(self):
+        """
+        Simulate NPC BRUCE creating new areas in the game world.
+        """
+        creation = random.choice(self.creations)
+        print(f"[BRUCE] has created {creation}. Players can explore this new area!")
+
+    def interact_with_player(self, player_name):
+        """
+        Provide a randomized interaction message from BRUCE to the player.
+        """
+        responses = [
+            f"Howdy, {player_name}! Care to help me plant some seeds?",
+            f"Hey there! I’ve just built a chicken coop—want to see the chicks?",
+            f"Got a secret tunnel in the works, but it needs testing. You game?"
+        ]
+        print(random.choice(responses))
+
+
+# Initialize sample avatars
+avatars = [
+    Avatar("broseph", "Superuser, Husband, Father", "A broad-shouldered strategist.",
+           "Earthshaper's Command", earthshapers_command),
+    Avatar("mamahen", "Admin, Wife, Mother", "A graceful protector and nurturer.",
+           "Heart of the Guardian", heart_of_the_guardian),
+    Avatar("tuCK", "Moderator, Brother, Oldest Son", "An energetic and playful windrunner.",
+           "Whispers of the Wind", whispers_of_the_wind),
+    Avatar("rAiNbOw rUbY", "User, Sister, Middle Daughter", "A vibrant, imaginative dreamweaver.",
+           "Dreamweaver's Brush", dreamweavers_brush),
+    Avatar("winston", "User, Brother, Youngest Son", "A tech genius who decodes mysteries.",
+           "Tech
+import json
+import os
+from datetime import datetime
+
+# Load the current tasks.json file
+base_path = os.environ.get("FAMILY_SERVER_ROOT")
+task_file = os.path.join(base_path, "tasks.json")
+
+# Load existing quest data
+with open(task_file, "r") as file:
+    data = json.load(file)
+
+import json
+import os
+
+# Locate the tasks.json file
+base_path = os.environ.get("FAMILY_SERVER_ROOT")
+task_file = os.path.join(base_path, "quests", "tasks.json")
+
+# Load existing data
+with open(task_file, "r") as file:
+    data = json.load(file)
+
+# Generate a new quest dynamically
+new_quest = {
+    "name": "Battle the Homework Dragon",
+    "status": "incomplete",
+    "xp_reward": 10
+}
+
+# Add the quest to tuCK's active quest list
+data["tuCK"]["quests"].append(new_quest)
+
+# Save updated tasks.json
+with open(task_file, "w") as file:
+    json.dump(data, file, indent=4)
+
+print(f"New quest added: {new_quest['name']}")
+
+
+# Generate a new daily quest
+new_quest = {
+    "name": f"Morning Quest - Prepare for Battle ({datetime.now().strftime('%Y-%m-%d')})",
+    "status": "incomplete",
+    "xp_reward": 10
+}
+
+# Add it to the quest list for tuCK
+data["tuCK"]["quests"].append(new_quest)
+
+# Save the updated tasks.json
+with open(task_file, "w") as file:
+    json.dump(data, file, indent=4)
+
+print(f"New quest added: {new_quest['name']}")
+# Mark a quest as completed and update XP
+for quest in data["tuCK"]["quests"]:
+    if quest["status"] == "incomplete":
+        quest["status"] = "completed"
+        data["tuCK"]["xp"] += quest["xp_reward"]
+        print(f"Quest completed: {quest['name']} | +{quest['xp_reward']} XP")
+        break
+
+# Save the updated tasks.json
+with open(task_file, "w") as file:
+    json.dump(data, file, indent=4)
+if data["tuCK"]["xp"] >= 50:
+    print("🎉 Milestone Reached: Triggering special event!")
+# Fire off a milestone notification
+import smtplib
+from email.mime.text import MIMEText
+
+subject = "🎉 Milestone Reached in Harris Wildlands!"
+body = "Hey tuCK! You’ve hit a milestone. Check your hidden treasure reward."
+
+msg = MIMEText(body)
+msg["Subject"] = subject
+msg["From"] = "wildsouthspice@gmail.com"
+msg["To"] = "tuck.finn.ms@gmail.com"
+
+with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    server.login("wildsouthspice@gmail.com", "your-app-password")
+    server.sendmail("wildsouthspice@gmail.com", "tuck.finn.ms@gmail.com", msg.as_string())
+
+print("🎉 Milestone notification sent to tuCK!")
+
+# Open tasks.json and update a quest as completed
+with open(task_file, "r") as file:
+    data = json.load(file)
+
+# Complete the first quest and add its XP reward
+for quest in data["tuCK"]["quests"]:
+    if quest["status"] == "incomplete":
+        quest["status"] = "completed"
+        data["tuCK"]["xp"] += quest["xp_reward"]
+        print(f"Completed quest: {quest['name']} | +{quest['xp_reward']} XP")
+        break
+
+# Save the updated tasks.json
+with open(task_file, "w") as file:
+    json.dump(data, file, indent=4)
+if data["tuCK"]["xp"] >= 50:
+    print("🎉 Milestone Reached! Sending notification...")
+import smtplib
+from email.mime.text import MIMEText
+
+sender_email = "wildsouthspice@gmail.com"
+receiver_email = "tuck.finn.ms@gmail.com"
+subject = "🎉 Milestone Reached!"
+body = "Congrats, tuCK! You've hit a major XP milestone. Check your hidden treasure reward and keep adventuring."
+
+msg = MIMEText(body)
+msg["Subject"] = subject
+msg["From"] = sender_email
+msg["To"] = receiver_email
+
+with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    server.login("wildsouthspice@gmail.com", "your-app-password")
+    server.sendmail(sender_email, receiver_email, msg.as_string())
+
+print("Milestone notification sent to tuCK!")
+
+import json
+import os
+
+# Path to tasks.json
+base_path = os.environ.get("FAMILY_SERVER_ROOT")
+task_file = os.path.join(base_path, "quests", "tasks.json")
+
+
+# Function to monitor XP changes
+def monitor_tasks() -> Any:
+    previous_xp = None
+    while True:
+        with open(task_file, "r") as file:
+            data = json.load(file)
+
+        current_xp = data["tuCK"]["xp"]
+        if previous_xp is not None and current_xp > previous_xp:
+            print(f"🎉 XP Increased! New XP: {current_xp}")
+            # Trigger milestone notifications or rewards here
+
+        previous_xp = current_xp
+
+
+monitor_tasks()
